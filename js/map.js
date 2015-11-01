@@ -1,222 +1,203 @@
-// Some features,
-// all the walls are in this.walls, all the floors are in this.floors
-// player stats are in this.playerstates
 
-
-Map = function(game, min_room_size, max_room_size, max_room_number) {
+Map = function(game) {
     
-    //lets initiate some parameters
-    //tile sizses in pixels
-
-    this.floor_tile_size_height = 100;
-    this.floor_tile_size_width = 100;
-    this.tile_offset_x =0;
-    this.tile_offset_y =0;
-    //this.floor_image = ["grass", "wood", "plain", "dirt", "grass", "grass"] ;
-    this.floor_image = ["grass"];
-    this.wall_image = null;
-    this.tree_image= ["tree_short", "tree_tall", "tree_ugly", "rock"];
-    this.tree_chance = 2;
+    this.game = game;
 
 
-    //group that holds the walkable tiles
-    this.floors = game.add.group();  
-    //group that holds the walls or any immovable objects
-    this.walls = game.add.group();
-    this.walls.enableBody = true;
+
+    this.ground = this.game.add.tileSprite(0,0,640,2272,'background');
+    this.ground.autoScroll(0,-20);
+    //this.ground = this.game.add.sprite(0,0,'background');
+
+    // the layers of each item from bottom to top
+    this.parallaxHolder2 = this.game.add.group();
+    this.parallaxHolder1 = this.game.add.group();
+    this.platformHolder = this.game.add.group();
+    this.candyHolder = this.game.add.group();
+
+    // bound holder for top bound and bottom bounds
+    /////////////////////////////////////////////////////////////////////////
+    this.boundHolder = this.game.add.group();
+
+    var spikesTop = this.boundHolder.create(0,0,null);
+    this.game.physics.arcade.enableBody(spikesTop);
+    spikesTop.body.setSize  (640, 1, 0 , 0 );
+    var spikesBottom = this.boundHolder.create(0,1135,null);
+    this.game.physics.arcade.enableBody(spikesBottom);
+    spikesBottom.body.setSize (640,1,0,0);
+    ///////////////////////////////////////////////////////////////////////// 
+    //end of bound holder
+
+
+    // makePlatforms (interval, speed)
     
-    this.game = game;  
-
-    //set the map array with empty tiles
-    this.maps = [];
-    for (var x = 0; x <= this.game.world.width/this.floor_tile_size_width ; x++){
-        this.maps [x] = [];
-        for (var y = 0; y <= this.game.world.height/this.floor_tile_size_height ; y++){
-            this.maps[x][y] = new this.Tile (x , y, null);
-        }
-    }
-
-    // set the min room size interms of tiles
-    this.room_min_size = min_room_size;
-    this.room_max_size = max_room_size;
-    this.max_rooms = max_room_number;
-
+    this.parallaxBG(2, 100);
+    this.makeCandy(0.5, 300);
+    this.makePlatforms(0.8, 220);
     
-    //variables to track the room numbers
-    this.lastRoomCoords = {x:0, y:0};
-    this.num_rooms = 0;
-    this.num_tiles = 0;
 
-    // variables to initiate starting position
-    this.player_x= 0;
-    this.player_y= 0;
-    this.destination_x = 0;
-    this.destination_y = 0;
-
-    // pass in the game variable so that it can find game
-    this.makeMap();
-    // add the actual tiles of the map
-    this.renderMap();
-    //create destination;
-    this.createDestination(this.destination_x , this.destination_y, "Princess");
-    // create some trees on the map
-    this.createTrees(10);
-
-}
-//Tile Object to hold informations of the map array
-
-Map.prototype.Tile = function (x,y,image){
-
-    this.floor_tile_size_height = 80;
-    this.floor_tile_size_width = 100;
-
-    this.x_index = x;
-    this.y_index = y;
-    this.x =x * this.floor_tile_size_width;
-    this.y =y * this.floor_tile_size_height;
-    this.image = image;
-    this.has_player = false;
-    this.has_enemy = false;
-    this.has_object = false;
-    this.empty = true;
-    this.movable= false;
-    this.end = false;
 
 }
 
-//create a room,
-Map.prototype.Room = function(x, y, w, h) {
-    this.x1 = x;
-    this.y1 = y;
-    this.x2 = x + w;
-    this.y2 = y + h;
+Map.prototype.makeCandy = function (interval, speed){
 
-    var center_x = (this.x1 + this.x2) / 2;
-    var center_y = (this.y1 + this.y2) / 2;
-    this.center_coords = {x: center_x, y: center_y};    
-}
+    this.candyGenerator = this.game.time.events.loop (Phaser.Timer.SECOND*interval, this.generateCandy, this, speed);
+    this.candyGenerator.timer.start();
 
-//create a floor, if not empty add a floor tile
-Map.prototype.createFloor = function(x, y) {
-
-    var x_index =x/this.floor_tile_size_width;
-    var y_index =y/this.floor_tile_size_height;
-
-    if (this.maps[x_index][y_index].empty){ // nothing exists
-        this.maps[x_index][y_index].empty = false;
-        this.maps[x_index][y_index].movable = true;
-        this.maps[x_index][y_index].image = this.floor_image[this.game.rnd.integerInRange(0,this.floor_image.length-1)];
-
-    }
 
 }
 
-Map.prototype.createRoom = function(x1, x2, y1, y2) {
-    for (var x = x1; x<x2; x+=this.floor_tile_size_width) {
-        for (var y = y1; y<y2; y+=this.floor_tile_size_height) {
+Map.prototype.generateCandy = function (speed){
 
-            this.createFloor(x, y);
+    var candy_img = "coin"
 
-        }
-    }
-}
+    var tileWidth = this.game.cache.getImage(candy_img).width;
+    var tileHeight = this.game.cache.getImage(candy_img).height;
 
-Map.prototype.createHTunnel = function(x1, x2, y) {
-    var min = Math.min(x1, x2);
-    var max = Math.max(x1, x2);
-    for (var x = min; x<=max; x+=this.floor_tile_size_width) {
-        this.createFloor(x, y);
-    }
 
-}
-Map.prototype.createVTunnel = function(y1, y2, x) {
-    var min = Math.min(y1, y2);
-    var max = Math.max(y1, y2);
-    for (var y = min; y<=max; y+=this.floor_tile_size_height) {      
-        this.createFloor(x, y);
-    }    
+    var y_pos = this.game.world.height + tileHeight;
+    var x_pos = this.game.rnd.integerInRange(0,this.game.world.width- tileWidth);
+
+    var candy = this.candyHolder.getFirstDead(false);
+    if(!candy){
+        candy = new randomItem (this.game, x_pos, y_pos, speed, candy_img);
+
+    }else{
+        candy.reset(x_pos, y_pos);
+    } 
+    candy.anchor.setTo(0.5,0.5);
+    candy.body.angularVelocity = 100;
+    this.candyHolder.add( candy);
 
 }
-// add a tree at x ,y
-Map.prototype.createDestination = function (x, y, image){
-    var x_index =x/this.floor_tile_size_width;
-    var y_index =y/this.floor_tile_size_height;
+//
+// game is this game
+// xpos ypos the position to have the coins generated
+// row and column to set how many coins to generate; ie 3x4 will have 12 coins
+//  coingroup holds teh coins to reuse
+// speed of the coin going up;
+function createCoins  (game, x_pos, y_pos, row, col,  coingroup, speed){
 
-    this.maps[x_index][y_index].end = true;
-    this.maps[x_index][y_index].movable = false;
-    this.walls.create(this.maps[x_index][y_index].x, this.maps[x_index][y_index].y, image);
+    var coin_img = "coin";
+    var tileWidth = this.game.cache.getImage(coin_img).width;
+    var tileHeight = this.game.cache.getImage(coin_img).height;
 
-}
-
-Map.prototype.createTrees = function (num){
-
-    var y_offset = 20;
-
-    while(num >0){
-        var startPos = this.floors.getRandom();
-        if (this.maps[startPos.data.x_index][startPos.data.y_index].has_object ==false){
-            num --;
-            tree = this.walls.create(startPos.x, startPos.y-y_offset, this.tree_image[this.game.rnd.integerInRange(0, this.tree_image.length-1)]); 
-            this.maps[startPos.data.x_index][startPos.data.y_index].has_object =true;
-            this.maps[startPos.data.x_index][startPos.data.y_index].movable =false;
-        }
-    }
-}
-
-// display all the sprites in the right layer
-Map.prototype.renderMap = function (){
-
-    this.floors.sort('y', Phaser.Group.SORT_ASCENDING);
-
-    for (var x = 0; x <= this.game.world.width/this.floor_tile_size_width ; x++){
-        for (var y = 0; y <= this.game.world.height/this.floor_tile_size_height ; y++){
-            if (this.maps[x][y].empty != true){
-                // add a movable tile
-                fl = this.floors.create(this.maps[x][y].x, this.maps[x][y].y , this.maps[x][y].image);
-                fl.data = {
-                    x_index : x,
-                    y_index : y
-                }
+    for (var i =0; x < row; x ++){
+        for (var j = 0; j <col; j++){
+            var coin = coingroup.getFirstDead(false);
+            if(!coin){
+                coin = new randomItem (game, x_pos+j*tileWidth, y_pos+i*tileHeight, speed, coin_img);
+                coingroup.add(coin);
+            }else{
+                coin.reset(x_pos+j*tileWidth, y_pos+i*tileHeight);
             }
+
+
         }
     }
 
 
 }
-Map.prototype.makeMap = function() {
-    for (var r=0; r<this.max_rooms; r++) {
-        // create a random size room
-        var w = this.game.rnd.integerInRange(this.room_min_size, this.room_max_size) * this.floor_tile_size_width;
-        var h = this.game.rnd.integerInRange(this.room_min_size, this.room_max_size) * this.floor_tile_size_height;
 
-        // find a position in the world to set the room
-        x = this.game.rnd.integerInRange(1, ((this.game.world.width ) / this.floor_tile_size_width) - (w/this.floor_tile_size_width + 1)) * this.floor_tile_size_width;
-        y = this.game.rnd.integerInRange(1, ((this.game.world.height) / this.floor_tile_size_height) - (h/this.floor_tile_size_height + 1)) * this.floor_tile_size_height;
 
-        this.createRoom(x, x+w, y, y+h);
+Map.prototype.makePlatforms = function(interval, speed) {
 
-        if (this.num_rooms == 0) {
-        // use these coordinates to assgin new player                
-           this.player_x = x ;
-           this.player_y = y ;
-        } else {
-            var new_x = this.game.math.snapToFloor(x + (w/2), this.floor_tile_size_width);
-            var new_y = this.game.math.snapToFloor(y + (h/2), this.floor_tile_size_height);
+    //create the first platform for chicken to land
 
-            var prev_x = this.game.math.snapToFloor(this.lastRoomCoords.x, this.floor_tile_size_width);
-            var prev_y = this.game.math.snapToFloor(this.lastRoomCoords.y, this.floor_tile_size_height);
 
-            
+    
+    this.platformGenerator = this.game.time.events.loop (Phaser.Timer.SECOND*interval, this.generatePlatform, this, speed);
+    this.platformGenerator.timer.start();
 
-            this.createHTunnel(prev_x, new_x, prev_y);
-            this.createVTunnel(prev_y, new_y, new_x);
-            // use the last room coordinates for destination TODO need a better method
-            this.destination_x = x;
-            this.destination_y = y;
-        }
+    var firstplat = new randomItem (this.game, 220, 1000, speed, 'platform');
+    this.platformHolder.add( firstplat);
 
-        this.lastRoomCoords = { x: x + (w/2), y: y + (h/2) };
-        this.num_rooms++;
-
-    }
 }
+
+Map.prototype.generatePlatform = function (speed){
+
+    console.log("the speed of platform generation is " + speed );
+
+    if (this.game.rnd.integerInRange(0,3)){ // 25% not generate platform
+
+        var platformWidth = 200;
+        var platformHeight = 20;
+
+        var y_pos = this.game.world.height + platformHeight*2;
+        var x_pos = this.game.rnd.integerInRange(0,this.game.world.width- platformWidth);
+
+        var plat = this.platformHolder.getFirstDead(false);
+        if(!plat){
+            plat = new randomItem (this.game, x_pos, y_pos, speed, 'platform');
+            this.platformHolder.add( plat);
+
+        }else{
+            plat.reset(x_pos, y_pos);
+        } 
+        
+    }
+
+}
+
+
+ function randomItem(game, x, y, speed, item){
+    this.movespeed = speed;
+
+    Phaser.Sprite.call(this, game, x, y, item);
+    //this.anchor.setTo(0.5,0.5);
+    this.game.physics.arcade.enableBody(this);
+    this.body.allowGravity= false;
+    this.body.immovable = true;
+    this.body.velocity.y = - this.movespeed;
+    //this.body.setSize(200, 20 , 0, 30);
+
+    this.checkWorldBounds = true;
+    this.outofBoundsKill = true;
+    game.add.existing(this);
+
+};
+randomItem.prototype = Object.create(Phaser.Sprite.prototype);
+randomItem.prototype.constructor = randomItem;
+
+
+
+Map.prototype.parallaxBG = function (interval, speed){
+
+    this.parallaxGenerator = this.game.time.events.loop (Phaser.Timer.SECOND*interval, this.generateParallax, this, speed);
+    this.parallaxGenerator.timer.start();
+
+}
+
+
+Map.prototype.generateParallax = function (speed){
+    console.log("creating parallax");
+    var layer = this.game.rnd.integerInRange(0,4) ;
+    if (layer){ // 25% not generate platform
+
+        var platformWidth = 200;
+        var platformHeight = 20;
+        var scaleFactor = this.game.rnd.realInRange(0.3, 1.2);
+        var y_pos = this.game.world.height + platformHeight*2;
+        var x_pos = this.game.rnd.integerInRange(0,this.game.world.width- (platformWidth*scaleFactor));
+
+        var plat = new randomItem (this.game, x_pos, y_pos, speed, 'cloud');
+        plat.frame = this.game.rnd.integerInRange(0,4);
+
+        
+        plat.scale.setTo(scaleFactor, scaleFactor);
+        if ( layer == 1){
+            plat.body.velocity.y =- speed/2;
+            plat.alpha = 0.5;
+            this.parallaxHolder2.add( plat);
+
+
+        }else{
+            this.parallaxHolder1.add( plat);
+        }
+        
+        
+    }
+
+}
+
+

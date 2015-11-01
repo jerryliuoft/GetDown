@@ -2,124 +2,146 @@
 
 'use strict'
 
- function Player(game, x, y, map, floors){
+ function Player(game, x, y, player, gravity, speed){
 	console.log('in Player!');
 
-    this.floor_tile_size_height = 80;
-    this.floor_tile_size_width = 100;
+    this.movespeed = speed;
 
-    //set up the sprite to the correct location
-    var new_x = game.math.snapToFloor(x, this.floor_tile_size_width);
-    var new_y = game.math.snapToFloor(y, this.floor_tile_size_height);
-
-
-	Phaser.Sprite.call(this, game, new_x, new_y, "player");
-    
-	this.game.physics.arcade.enableBody(this);
-    this.body.setSize(this.floor_tile_size_width, this.floor_tile_size_height, 0, 50);
-
-    //this.anchor.setTo(0.5,0.5);
+	Phaser.Sprite.call(this, game, x, y, player);
+   	this.game.physics.arcade.enableBody(this);
+   
+    this.anchor.setTo(0.5,0.5);
 	game.add.existing(this);
 	this.game = game;
-    this.floors = floors;
-    this.maps = map;
+
     //set up the keyboard for moving
-    this.initKeyboard(game);
+    this.cursors = this.game.input.keyboard.createCursorKeys();
+
+    //add mouse/touch controls
+    this.game.input.onDown.add(this.beginSwipe, this);
+    this.previousvelocity = 0;
+
+
+
+    this.body.bounce.y = 0.1;
+    this.body.gravity.y = gravity;
+    this.body.collideWorldBounds = true;
+
+
+    this.animations.add('walk');
+    //this.createEmitter();
+
+
+
 	
 };
 Player.prototype = Object.create(Phaser.Sprite.prototype);
 Player.prototype.constructor = Player;
 
-Player.prototype.initKeyboard = function (game){
-
-    // add the up down left right keys for movement
-    this.key1 = game.input.keyboard.addKey(Phaser.Keyboard.UP);
-    this.key1.onDown.add(this.moveUp, this);
-    this.key2 = game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
-    this.key2.onDown.add(this.moveDown, this);
-    this.key3 = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
-    this.key3.onDown.add(this.moveRight, this);
-    this.key4 = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
-    this.key4.onDown.add(this.moveLeft, this);
-
+// when the player begins to swipe we only save mouse/finger coordinates, remove the touch/click
+// input listener and add a new listener to be fired when the mouse/finger has been released,
+// then we call endSwipe function
+Player.prototype.beginSwipe = function (){
+    console.log ("begining swipe");
+    this.startX = this.game.input.worldX;
+    this.startY = this.game.input.worldY;
+    this.game.input.onDown.remove(this.beginSwipe);
+    this.game.input.onUp.add(this.endSwipe, this);
 }
 
-Player.prototype.moveUp = function(){
-    if (this.canMove(0, -1)){
-        this.y -= this.floor_tile_size_height;
-    }   
+// function to be called when the player releases the mouse/finger
+Player.prototype.endSwipe = function (){
+    console.log ("ending swipe");
+    // saving mouse/finger coordinates
+    this.endX = this.game.input.worldX;
+    this.endY = this.game.input.worldY;
+    // determining x and y distance travelled by mouse/finger from the start
+    // of the swipe until the end
+    var distX = this.startX-this.endX;
+    var distY = this.startY-this.endY;
+    // in order to have an horizontal swipe, we need that x distance is at least twice the y distance
+    // and the amount of horizontal distance is at least 10 pixels
+    if(Math.abs(distX)>Math.abs(distY)*2 && Math.abs(distX)>10){
+        // moving left, calling move function with horizontal and vertical tiles to move as arguments
+        if(distX>0){
+                this.move(-1,0);
+           }
+           // moving right, calling move function with horizontal and vertical tiles to move as arguments
+           else{
+                this.move(1,0);
+           }
+    }else{
+        this.move(0,0);
+    }
+
+    // stop listening for the player to release finger/mouse, let's start listening for the player to click/touch
+    this.game.input.onDown.add(this.beginSwipe, this);
+    this.game.input.onUp.remove(this.endSwipe);
 }
-Player.prototype.moveDown = function(){
-    if (this.canMove(0,1))
-    {
-        this.y += this.floor_tile_size_height;
+
+Player.prototype.move =  function (deltaX, deltaY){
+    console.log ("moving");
+
+    if (deltaX >0){
+        this.previousvelocity = this.movespeed;
+        this.scale.x = -1;
+    } else if (deltaX <0){
+        this.previousvelocity = -this.movespeed;
+        this.scale.x = 1;
+
+    }else{
+        this.previousvelocity = 0;
     }
 }
-Player.prototype.moveLeft = function(){
-    if (this.canMove(-1,0)){
-    this.x -= this.floor_tile_size_width;
-    }
-}
-Player.prototype.moveRight = function(){
-    if (this.canMove(1,0)){
-    this.x += this.floor_tile_size_width;
-    }
-}
-// x for num of tiles horizontal
-// y for num of tile verticle
-Player.prototype.canMove = function (x ,y){
 
-    var x_index = this.x/this.floor_tile_size_width;
-    var y_index = this.y/this.floor_tile_size_height;
-
-    if (this.maps[x_index+ x][y_index+ y].movable){
-        this.maps[x_index+ x][y_index+ y].has_player = true;
-        this.maps[x_index+ x][y_index+ y].movable = false;
-        //set the old tile to normal state
-        this.maps[x_index][y_index].has_player = false;
-        this.maps[x_index][y_index].movable = true;
+Player.prototype.createEmitter =function (){
+    //create a emmiter
+    this.emitter = this.game.add.emitter(200, 300, 1000);
+    this.emitter.makeParticles('cake');
+    this.emitter.minParticleScale = 0.3;
+    this.emitter.maxParticleScale = 0.3;
+    this.emitter.setYSpeed(-600, -400);
 
 
-        return true;
-    }
-    return false;
+
+
 }
 
 Player.prototype.update= function (){
 
-  /*
-  
-    this.body.velocity.x = 0;
-    this.body.velocity.y = 0;                     
-  
-    if (this.cursors.left.onDown) {
-        console.log ("hi");
-    } 
+    this.body.velocity.x = this.previousvelocity;
+    this.animations.play('walk', 30, true);
 
-    else if (this.cursors.right.onDown) {
-        this.game.physics.arcade.moveToXY(
-        this, 
-        this.body.x + this.width, // target x position
-        this.body.y, // keep y position the same as we are moving along x axis
-        250 // velocity to move at
-        );
+    // reset velocity
+    //this.body.velocity.x = 0;
 
-    } 
-    
-    if (this.cursors.up.onDown) {
-        this.game.physics.arcade.moveToXY(
-        this, 
-        this.body.x, // target x position
-        this.body.y-this.height, // keep y position the same as we are moving along x axis
-        250 // velocity to move at
-        );
-    } else if (this.cursors.down.onDown) {
-        this.game.physics.arcade.moveToXY(
-        this, 
-        this.body.x, // target x position
-        this.body.y+this.height, // keep y position the same as we are moving along x axis
-        250 // velocity to move at
-        );
-    }  
-    */   
+
+    if (this.cursors.left.isDown)
+    {
+        this.previousvelocity = -this.movespeed;
+        this.scale.x = 1;
+        //this.animations.play('walk', 10, true);
+        
+    }
+    else if (this.cursors.right.isDown)
+    {
+        this.previousvelocity = this.movespeed;
+        this.scale.x = -1;
+        //this.animations.stop(1);
+
+    }
+    /*
+    // (explode, lifespan, frequency, quantity, forceQuality)
+    this.emitter.start(false, 600, 30,1);
+    if (!this.body.touching.down){
+
+        this.emitter.emitX = this.x;
+        this.emitter.emitY = this.y;
+
+    }else{
+        this.emitter.emitX = 0;
+        this.emitter.emitY = 0;        
+    }
+    */
+
 }
