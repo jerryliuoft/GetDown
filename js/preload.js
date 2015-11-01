@@ -7,8 +7,6 @@ var RPG = RPG || {};
 */
 
 RPG.PreloadState = function (game){
-    RPG.GAME_WIDTH = 640;
-    RPG.GAME_HEIGHT = 960;
 
 };
 RPG.PreloadState.prototype= {

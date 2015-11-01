@@ -32,7 +32,7 @@ Map = function(game) {
     // makePlatforms (interval, speed)
     
     this.parallaxBG(2, 100);
-    this.makeCandy(0.5, 300);
+    //this.makeCandy(2, 300);
     this.makePlatforms(0.8, 220);
     
 
@@ -49,25 +49,13 @@ Map.prototype.makeCandy = function (interval, speed){
 
 Map.prototype.generateCandy = function (speed){
 
-    var candy_img = "coin"
-
-    var tileWidth = this.game.cache.getImage(candy_img).width;
-    var tileHeight = this.game.cache.getImage(candy_img).height;
-
+    var tileWidth = this.game.cache.getImage("coin").width;
+    var tileHeight = this.game.cache.getImage("coin").height;
 
     var y_pos = this.game.world.height + tileHeight;
     var x_pos = this.game.rnd.integerInRange(0,this.game.world.width- tileWidth);
 
-    var candy = this.candyHolder.getFirstDead(false);
-    if(!candy){
-        candy = new randomItem (this.game, x_pos, y_pos, speed, candy_img);
-
-    }else{
-        candy.reset(x_pos, y_pos);
-    } 
-    candy.anchor.setTo(0.5,0.5);
-    candy.body.angularVelocity = 100;
-    this.candyHolder.add( candy);
+    createCoins(this.game, x_pos, y_pos, 10, 10, this.candyHolder, speed);
 
 }
 //
@@ -79,20 +67,19 @@ Map.prototype.generateCandy = function (speed){
 function createCoins  (game, x_pos, y_pos, row, col,  coingroup, speed){
 
     var coin_img = "coin";
-    var tileWidth = this.game.cache.getImage(coin_img).width;
-    var tileHeight = this.game.cache.getImage(coin_img).height;
+    var tileWidth = game.cache.getImage(coin_img).width;
+    var tileHeight = game.cache.getImage(coin_img).height;
 
-    for (var i =0; x < row; x ++){
+    for (var i =0; i < row; i ++){
         for (var j = 0; j <col; j++){
+            
             var coin = coingroup.getFirstDead(false);
             if(!coin){
-                coin = new randomItem (game, x_pos+j*tileWidth, y_pos+i*tileHeight, speed, coin_img);
+                coin = randomItem (game, x_pos+j*tileWidth, y_pos+i*tileHeight, speed, coin_img);
                 coingroup.add(coin);
             }else{
                 coin.reset(x_pos+j*tileWidth, y_pos+i*tileHeight);
             }
-
-
         }
     }
 
@@ -109,55 +96,75 @@ Map.prototype.makePlatforms = function(interval, speed) {
     this.platformGenerator = this.game.time.events.loop (Phaser.Timer.SECOND*interval, this.generatePlatform, this, speed);
     this.platformGenerator.timer.start();
 
-    var firstplat = new randomItem (this.game, 220, 1000, speed, 'platform');
+    var firstplat = randomItem (this.game, 220, 1000, speed, 'platform');
     this.platformHolder.add( firstplat);
 
 }
 
 Map.prototype.generatePlatform = function (speed){
 
-    console.log("the speed of platform generation is " + speed );
+    //console.log("the speed of platform generation is " + speed );
 
     if (this.game.rnd.integerInRange(0,3)){ // 25% not generate platform
 
         var platformWidth = 200;
         var platformHeight = 20;
 
-        var y_pos = this.game.world.height + platformHeight*2;
+        var y_pos = this.game.world.height - platformHeight*2;
         var x_pos = this.game.rnd.integerInRange(0,this.game.world.width- platformWidth);
+
+        console.log("number of platforms: "+ this.platformHolder.length);
+        console.log("number of platforms alive: " + this.platformHolder.countLiving());
+        console.log("number of platforms dead: " + this.platformHolder.countDead());
+
 
         var plat = this.platformHolder.getFirstDead(false);
         if(!plat){
-            plat = new randomItem (this.game, x_pos, y_pos, speed, 'platform');
+            plat = randomItem (this.game, x_pos, y_pos, speed, 'platform');
             this.platformHolder.add( plat);
 
         }else{
-            plat.reset(x_pos, y_pos);
+            console.log("recreating platform");
+            resetItem(this.game, plat, x_pos, y_pos, speed);
         } 
+        
         
     }
 
 }
 
 
- function randomItem(game, x, y, speed, item){
-    this.movespeed = speed;
+ function randomItem(game, x, y, speed, itemimg){
+    
 
-    Phaser.Sprite.call(this, game, x, y, item);
+    var item = game.add.sprite (x, y, itemimg);
     //this.anchor.setTo(0.5,0.5);
-    this.game.physics.arcade.enableBody(this);
-    this.body.allowGravity= false;
-    this.body.immovable = true;
-    this.body.velocity.y = - this.movespeed;
+    game.physics.arcade.enableBody(item);
+    item.body.allowGravity= false;
+    item.body.immovable = true;
+    item.body.velocity.y = - speed;
     //this.body.setSize(200, 20 , 0, 30);
 
-    this.checkWorldBounds = true;
-    this.outofBoundsKill = true;
-    game.add.existing(this);
+    item.checkWorldBounds = true;
+    item.outOfBoundsKill = true;
+    //game.add.existing(this);
+
+    return item;
 
 };
-randomItem.prototype = Object.create(Phaser.Sprite.prototype);
-randomItem.prototype.constructor = randomItem;
+
+function resetItem (game, item, x_pos, y_pos, speed){
+
+    item.reset(x_pos, y_pos);
+    game.physics.arcade.enableBody(item);
+    item.body.allowGravity= false;
+    item.body.immovable = true;
+    item.body.velocity.y = - speed;
+    //this.body.setSize(200, 20 , 0, 30);
+
+    item.checkWorldBounds = true;
+    item.outOfBoundsKill = true;
+}
 
 
 
@@ -170,7 +177,7 @@ Map.prototype.parallaxBG = function (interval, speed){
 
 
 Map.prototype.generateParallax = function (speed){
-    console.log("creating parallax");
+    //console.log("creating parallax");
     var layer = this.game.rnd.integerInRange(0,4) ;
     if (layer){ // 25% not generate platform
 
@@ -180,21 +187,38 @@ Map.prototype.generateParallax = function (speed){
         var y_pos = this.game.world.height + platformHeight*2;
         var x_pos = this.game.rnd.integerInRange(0,this.game.world.width- (platformWidth*scaleFactor));
 
-        var plat = new randomItem (this.game, x_pos, y_pos, speed, 'cloud');
-        plat.frame = this.game.rnd.integerInRange(0,4);
+
+        var plat;
+        
 
         
-        plat.scale.setTo(scaleFactor, scaleFactor);
+        
         if ( layer == 1){
-            plat.body.velocity.y =- speed/2;
+            plat = this.parallaxHolder2.getFirstDead(false);
+            if(!plat){
+                plat = randomItem (this.game, x_pos, y_pos, speed/2, 'cloud');
+                this.parallaxHolder2.add( plat);
+            }else{                
+                resetItem(this.game, plat, x_pos, y_pos, speed/2);
+                
+            } 
+
             plat.alpha = 0.5;
-            this.parallaxHolder2.add( plat);
-
-
+            
         }else{
-            this.parallaxHolder1.add( plat);
+            plat = this.parallaxHolder1.getFirstDead(false);
+            if(!plat){
+                plat = randomItem (this.game, x_pos, y_pos, speed, 'cloud');
+                this.parallaxHolder1.add( plat);
+
+            }else{
+
+                resetItem(this.game, plat, x_pos, y_pos, speed);
+            } 
+            
         }
-        
+        plat.scale.setTo(scaleFactor, scaleFactor);
+        plat.frame = this.game.rnd.integerInRange(0,4);
         
     }
 

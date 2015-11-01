@@ -13,6 +13,7 @@ RPG.GameState.prototype = {
         // fullscreen or not
         //this.game.scale.fullScreenScaleMode = Phaser.ScaleManager.SHOW_ALL;
         this.game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
+        this.game.world.setBounds(0, 0, 640, 1500);
 
 
         this.game_map = new Map(this.game);
