@@ -1,6 +1,7 @@
 'use strict';
 var RPG = RPG || {};
 
+RPG.mute = false;
 
 RPG.GameState = function (game){};
 RPG.GameState.prototype = {
@@ -43,10 +44,21 @@ RPG.GameState.prototype = {
 
         this.coinSound= this.game.add.audio('coin_sound');
         this.landSound= this.game.add.audio('land_sound');
+        this.deadSound= this.game.add.audio('dead_sound');
 
 
 
         //console.log ("game height: "+ this.game.height+ " world height: "+this.game.world.height);
+
+        this.volumeButton = this.add.button(this.game.width- 100, 30, 'volume', this.mutesound, this,0,0,1);
+        this.volumeButton.anchor.setTo(0.5,0.5);
+        if (!RPG.mute){
+            this.volumeButton.setFrames(0, 0, 1);
+        }else{
+            this.volumeButton.setFrames(2, 2, 3);
+
+        }
+
 
 
 
@@ -80,6 +92,20 @@ RPG.GameState.prototype = {
         //this.game.debug.inputInfo(32, 32);
     },
     */
+    mutesound: function (){
+        if (RPG.mute){
+            this.volumeButton.setFrames(0, 0, 1);
+            this.game.sound.mute = false;
+            RPG.mute=false;
+
+        }else{
+            this.volumeButton.setFrames(2, 2, 3);
+            this.game.sound.mute = true;
+            RPG.mute=true;
+
+        }
+
+    },
     incrementScore: function (num) {
         this.score +=num;
         this.scoreText.setText (this.score.toString());
@@ -121,6 +147,7 @@ RPG.GameState.prototype = {
     gameOverHandler :function (){
         this.scoreboard.show(this.score);
         this.scoreText.visible = false;
+        //this.deadSound.play();
         this.player.kill();
     },
     platformHandler : function (player, platform){

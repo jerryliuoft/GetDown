@@ -39,10 +39,12 @@ RPG.PreloadState.prototype= {
 		this.game.load.image("gameover", "img/gameover.png");
 		this.game.load.image("scoreboard", "img/scoreboard.png");
 		this.game.load.spritesheet("start", "img/start.png",150,150);
+		this.game.load.spritesheet("volume", "img/volume.png",50,50);
 		this.load.bitmapFont('flappyfont', 'fonts/flappyfont/flappyfont.png', 'fonts/flappyfont/flappyfont.fnt');
 
 		this.load.audio('coin_sound', 'sfx/Pickup_Coin.wav');
 		this.load.audio('land_sound', 'sfx/land.wav');
+		this.load.audio('dead_sound', 'sfx/dead.wav');
 
 
 	},
