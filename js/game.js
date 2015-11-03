@@ -10,22 +10,24 @@ RPG.GameState.prototype = {
     },
 
     create: function () {
-        // fullscreen or not
         //this.game.scale.fullScreenScaleMode = Phaser.ScaleManager.SHOW_ALL;
         this.game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
-        this.game.world.setBounds(0, 0, 640, 1500);
+        //need to set portrait orientation
+
+        // set world height higher so there's more room for stuff to fly in before it gets killed by outof boudns kill
+        this.game.world.setBounds(0, 0, 640, 2000);
 
 
         this.game_map = new Map(this.game);
         // function : Player(game, x, y, player, gravity, speed)
 
-        this.player = new Player(this.game, 350, 100, "chicken", 1500, 350);
+        this.player = new Player(this.game, 320, 100, "chicken", 1500, 350);
 
         this.score = 0;
         this.scoreBuffer = 0;
         this.scoreText = this.game.add.bitmapText(this.game.width/2, 10, 'flappyfont', this.score.toString(),80);
         this.scoreText.visible = true;
-        //this.scoreText.anchor.setTo(0.5,0);
+
         this.scoreText.align = 'center';
         this.scoreLabelTween = this.add.tween(this.scoreText.scale).to({ x: 1.5, y: 1.5}, 200, Phaser.Easing.Linear.In).to({ x: 1, y: 1}, 200, Phaser.Easing.Linear.In);
 
@@ -39,21 +41,35 @@ RPG.GameState.prototype = {
 
     */
 
+        this.coinSound= this.game.add.audio('coin_sound');
+        this.landSound= this.game.add.audio('land_sound');
+
+
+
+        //console.log ("game height: "+ this.game.height+ " world height: "+this.game.world.height);
+
 
 
 
 
     },
     update : function (){
-        this.game.physics.arcade.collide (this.player, this.game_map.platformHolder);
+        this.game.physics.arcade.collide (this.player, this.game_map.platformHolder, this.platformHandler,null,this);
         this.game.physics.arcade.overlap(this.player, this.game_map.boundHolder, this.gameOverHandler, null, this);
-        this.game.physics.arcade.overlap (this.player, this.game_map.candyHolder, this.candyHandler, null, this);
+        this.game.physics.arcade.overlap (this.player, this.game_map.coinHolder, this.candyHandler, null, this);
         
 
         if (this.scoreBuffer > 0){
-            this.incrementScore();
-            this.scoreBuffer -- ;
+
+            if (this.scoreBuffer > 100){
+                this.incrementScore(10);
+                this.scoreBuffer -=10;
+            }else{
+                this.incrementScore(1);
+                this.scoreBuffer -- ;
+            }
         }
+
 
 
     },
@@ -64,9 +80,10 @@ RPG.GameState.prototype = {
         //this.game.debug.inputInfo(32, 32);
     },
     */
-    incrementScore: function () {
-        this.score +=1;
-        this.scoreText.setText (this.score.toString());  
+    incrementScore: function (num) {
+        this.score +=num;
+        this.scoreText.setText (this.score.toString());
+        this.scoreText.x = this.game.width/2 - (this.scoreText.textWidth/2);
     },
     increaseSpeed: function () {
         this.player.movespeed += 10;
@@ -106,7 +123,13 @@ RPG.GameState.prototype = {
         this.scoreText.visible = false;
         this.player.kill();
     },
-
+    platformHandler : function (player, platform){
+        if (!platform.played){
+            this.landSound.play();
+            platform.played = true;
+        }
+        
+    },
 
 
     candyHandler :function (player, candy){
@@ -114,6 +137,7 @@ RPG.GameState.prototype = {
         this.scoreBuffer += 5;
         this.createScoreAnimation(player.x + player.width/2, candy.y, '+5', 5);
         candy.kill ();
+        this.coinSound.play();
     }
 
 

@@ -9,6 +9,8 @@
 
 	Phaser.Sprite.call(this, game, x, y, player);
    	this.game.physics.arcade.enableBody(this);
+
+    this.previous_touching = false;
    
     this.anchor.setTo(0.5,0.5);
 	game.add.existing(this);
@@ -30,6 +32,7 @@
 
     this.animations.add('walk');
     //this.createEmitter();
+
 
 
 
@@ -71,7 +74,7 @@ Player.prototype.endSwipe = function (){
                 this.move(1,0);
            }
     }else{
-        this.move(0,0);
+        //this.move(0,0);
     }
 
     // stop listening for the player to release finger/mouse, let's start listening for the player to click/touch
@@ -130,6 +133,10 @@ Player.prototype.update= function (){
         //this.animations.stop(1);
 
     }
+
+    // on touch ground, play sound
+
+
     /*
     // (explode, lifespan, frequency, quantity, forceQuality)
     this.emitter.start(false, 600, 30,1);

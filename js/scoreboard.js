@@ -3,7 +3,7 @@ function Scoreboard (game){
 	var gameover;
 
 	Phaser.Group.call (this, game);
-	gameover = this.create(this.game.width/2, 100, 'gameover');
+	gameover = this.create(this.game.width/2, 50, 'gameover');
 	gameover.anchor.setTo(0.5,0.5);
 	
 
@@ -13,14 +13,15 @@ function Scoreboard (game){
 	this.scoreboard.anchor.setTo(0.5,0.5);
 
 
-	this.scoreText = this.game.add.bitmapText (380, 180, 'flappyfont', '', 18 );
+	this.scoreText = this.game.add.bitmapText (380, 180, 'flappyfont', '', 26 );
 	this.add(this.scoreText);
 
-	this.bestScoreText = this.game.add.bitmapText (380, 230, 'flappyfont', '', 18);
+	this.bestScoreText = this.game.add.bitmapText (380, 230, 'flappyfont', '', 26);
 	this.add(this.bestScoreText);
+	
 
 	//add our start button with a callback
-	this.startButton = this.game.add.button (this.game.width/2, 300, 'start', this.startClick, this);
+	this.startButton = this.game.add.button (this.game.width/2, 350, 'start', this.startClick, this,0,0,1);
 	this.startButton.anchor.setTo(0.5,0.5);
 
 	this.add(this.startButton);

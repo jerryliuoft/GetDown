@@ -5,6 +5,8 @@ Map = function(game) {
 
 
 
+
+
     this.ground = this.game.add.tileSprite(0,0,640,2272,'background');
     this.ground.autoScroll(0,-20);
     //this.ground = this.game.add.sprite(0,0,'background');
@@ -13,7 +15,7 @@ Map = function(game) {
     this.parallaxHolder2 = this.game.add.group();
     this.parallaxHolder1 = this.game.add.group();
     this.platformHolder = this.game.add.group();
-    this.candyHolder = this.game.add.group();
+    this.coinHolder = this.game.add.group();
 
     // bound holder for top bound and bottom bounds
     /////////////////////////////////////////////////////////////////////////
@@ -21,7 +23,7 @@ Map = function(game) {
 
     var spikesTop = this.boundHolder.create(0,0,null);
     this.game.physics.arcade.enableBody(spikesTop);
-    spikesTop.body.setSize  (640, 1, 0 , 0 );
+    spikesTop.body.setSize  (640, 1, 0 , -30 );
     var spikesBottom = this.boundHolder.create(0,1135,null);
     this.game.physics.arcade.enableBody(spikesBottom);
     spikesBottom.body.setSize (640,1,0,0);
@@ -32,54 +34,70 @@ Map = function(game) {
     // makePlatforms (interval, speed)
     
     this.parallaxBG(2, 100);
-    //this.makeCandy(2, 300);
-    this.makePlatforms(0.8, 220);
+    this.makeCoin(1.3, 400);
+    //this.makePlatforms(0.8, 220);
+    this.makePlatforms(0.6, 300);
     
 
 
 }
 
-Map.prototype.makeCandy = function (interval, speed){
+Map.prototype.makeCoin = function (interval, speed){
 
-    this.candyGenerator = this.game.time.events.loop (Phaser.Timer.SECOND*interval, this.generateCandy, this, speed);
-    this.candyGenerator.timer.start();
+    this.coinGenerator = this.game.time.events.loop (Phaser.Timer.SECOND*interval, this.generateCoin, this, speed);
+    this.coinGenerator.timer.start();
 
 
 }
 
-Map.prototype.generateCandy = function (speed){
+Map.prototype.generateCoin = function (speed){
 
     var tileWidth = this.game.cache.getImage("coin").width;
     var tileHeight = this.game.cache.getImage("coin").height;
 
-    var y_pos = this.game.world.height + tileHeight;
-    var x_pos = this.game.rnd.integerInRange(0,this.game.world.width- tileWidth);
+    var num_row = 5;
+    var num_col = 5;
 
-    createCoins(this.game, x_pos, y_pos, 10, 10, this.candyHolder, speed);
+    var y_pos = this.game.height + tileHeight*num_row;
+    var x_pos = this.game.rnd.integerInRange(0,this.game.width- tileWidth*num_col);
+
+    var shape = coinShapes('L');
+
+    createCoins(this.game, x_pos, y_pos, num_row, num_col, this.coinHolder, speed, shape);
 
 }
+
 //
 // game is this game
 // xpos ypos the position to have the coins generated
 // row and column to set how many coins to generate; ie 3x4 will have 12 coins
 //  coingroup holds teh coins to reuse
 // speed of the coin going up;
-function createCoins  (game, x_pos, y_pos, row, col,  coingroup, speed){
+// shape of the coin
+function createCoins  (game, x_pos, y_pos, row, col,  coingroup, speed, shape){
+
+    console.log("making coins")
 
     var coin_img = "coin";
     var tileWidth = game.cache.getImage(coin_img).width;
     var tileHeight = game.cache.getImage(coin_img).height;
 
+    //var coin = randomItem (game, x_pos, y_pos, speed, coin_img);
+ 
+
     for (var i =0; i < row; i ++){
         for (var j = 0; j <col; j++){
-            
-            var coin = coingroup.getFirstDead(false);
-            if(!coin){
-                coin = randomItem (game, x_pos+j*tileWidth, y_pos+i*tileHeight, speed, coin_img);
-                coingroup.add(coin);
-            }else{
-                coin.reset(x_pos+j*tileWidth, y_pos+i*tileHeight);
+            if(shape[i][j]){
+                var coin = coingroup.getFirstDead(false);
+                if(!coin){
+                    coin = randomItem (game, x_pos+j*tileWidth, y_pos+i*tileHeight, speed, coin_img);
+                    coingroup.add(coin);
+                }else{
+                    resetItem (game, coin, x_pos+j*tileWidth, y_pos+i*tileHeight, speed);
+                }
+
             }
+
         }
     }
 
@@ -110,12 +128,12 @@ Map.prototype.generatePlatform = function (speed){
         var platformWidth = 200;
         var platformHeight = 20;
 
-        var y_pos = this.game.world.height - platformHeight*2;
-        var x_pos = this.game.rnd.integerInRange(0,this.game.world.width- platformWidth);
+        var y_pos = this.game.height + platformHeight*2;
+        var x_pos = this.game.rnd.integerInRange(0,this.game.width- platformWidth);
 
-        console.log("number of platforms: "+ this.platformHolder.length);
-        console.log("number of platforms alive: " + this.platformHolder.countLiving());
-        console.log("number of platforms dead: " + this.platformHolder.countDead());
+        //console.log("number of platforms: "+ this.platformHolder.length);
+        //console.log("number of platforms alive: " + this.platformHolder.countLiving());
+        //console.log("number of platforms dead: " + this.platformHolder.countDead());
 
 
         var plat = this.platformHolder.getFirstDead(false);
@@ -124,7 +142,7 @@ Map.prototype.generatePlatform = function (speed){
             this.platformHolder.add( plat);
 
         }else{
-            console.log("recreating platform");
+            //console.log("recreating platform");
             resetItem(this.game, plat, x_pos, y_pos, speed);
         } 
         
@@ -164,6 +182,9 @@ function resetItem (game, item, x_pos, y_pos, speed){
 
     item.checkWorldBounds = true;
     item.outOfBoundsKill = true;
+
+    //reset sound
+    item.played = false;
 }
 
 
@@ -184,8 +205,8 @@ Map.prototype.generateParallax = function (speed){
         var platformWidth = 200;
         var platformHeight = 20;
         var scaleFactor = this.game.rnd.realInRange(0.3, 1.2);
-        var y_pos = this.game.world.height + platformHeight*2;
-        var x_pos = this.game.rnd.integerInRange(0,this.game.world.width- (platformWidth*scaleFactor));
+        var y_pos = this.game.height + platformHeight*2;
+        var x_pos = this.game.rnd.integerInRange(0,this.game.width- (platformWidth*scaleFactor));
 
 
         var plat;
@@ -200,7 +221,7 @@ Map.prototype.generateParallax = function (speed){
                 this.parallaxHolder2.add( plat);
             }else{                
                 resetItem(this.game, plat, x_pos, y_pos, speed/2);
-                
+
             } 
 
             plat.alpha = 0.5;
@@ -225,3 +246,129 @@ Map.prototype.generateParallax = function (speed){
 }
 
 
+
+function coinShapes (shape){
+
+    var lookup = [];
+    var shapes = [];
+
+
+
+    var Template =[
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0]
+    ];
+    lookup['template'] = Template;
+
+
+    var L = [
+    [1, 1, 0, 0, 0],
+    [1, 1, 0, 0, 0],
+    [1, 1, 0, 0, 0],
+    [1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1]
+    ];
+    lookup['L'] = L;
+    shapes.push(L);
+
+    var up_arrow =[
+    [0, 0, 1, 0, 0],
+    [0, 1, 1, 1, 0],
+    [1, 1, 1, 1, 1],
+    [1, 1, 0, 1, 1],
+    [1, 0, 0, 0, 1]
+    ];
+    lookup['up_arrow'] = up_arrow;
+    shapes.push(up_arrow);
+
+
+    var O =[
+    [0, 1, 1, 1, 0],
+    [1, 1, 0, 1, 1],
+    [1, 1, 0, 1, 1],
+    [1, 1, 0, 1, 1],
+    [0, 1, 1, 1, 0]
+    ];
+    lookup['O'] = O;
+    shapes.push(O);
+
+    var V =[
+    [1, 0, 0, 0, 1],
+    [1, 1, 0, 1, 1],
+    [1, 1, 1, 1, 1],
+    [0, 1, 1, 1, 0],
+    [0, 0, 1, 0, 0]
+    ];
+    lookup['V'] = V;
+    shapes.push(V);
+
+    var E = [
+    [1, 1, 1, 1, 1],
+    [1, 1, 0, 0, 0],
+    [1, 1, 1, 1, 1],
+    [1, 1, 0, 0, 0],
+    [1, 1, 1, 1, 1]
+    ];
+    lookup['E'] = E;
+    shapes.push(E);
+
+    var Dimond = [
+    [0, 0, 1, 0, 0],
+    [0, 1, 1, 1, 0],
+    [1, 1, 1, 1, 1],
+    [0, 1, 1, 1, 0],
+    [0, 0, 1, 0, 0]
+    ];
+    lookup['Dimond'] = Dimond;
+    shapes.push(Dimond);
+
+    var heart = [
+    [0, 1, 0, 1, 0],
+    [1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1],
+    [0, 1, 1, 1, 0],
+    [0, 0, 1, 0, 0]
+    ];
+    lookup['heart'] = heart;
+    shapes.push(heart);
+
+    var forward_slash=[
+    [0, 0, 0, 1, 1],
+    [0, 0, 1, 1, 1],
+    [0, 1, 1, 1, 0],
+    [1, 1, 1, 0, 0],
+    [1, 1, 0, 0, 0]
+    ];
+    lookup['forward_slash'] = forward_slash;
+    shapes.push(forward_slash);
+    var back_slash=[
+    [1, 1, 0, 0, 0],
+    [1, 1, 1, 0, 0],
+    [0, 1, 1, 1, 0],
+    [0, 0, 1, 1, 1],
+    [0, 0, 0, 1, 1]
+    ];
+    lookup['back_slash'] = back_slash;
+    shapes.push(back_slash);
+
+
+    var plus=[
+    [0, 0, 1, 0, 0],
+    [0, 0, 1, 0, 0],
+    [1, 1, 1, 1, 1],
+    [0, 0, 1, 0, 0],
+    [0, 0, 1, 0, 0]
+    ];
+    lookup['plus'] = plus;
+    shapes.push(plus);
+    
+
+    
+
+    var item = shapes[Math.floor(Math.random()*shapes.length)];
+
+    return item;
+}
