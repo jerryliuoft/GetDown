@@ -17,30 +17,34 @@ RPG.GameState.prototype = {
 
         // set world height higher so there's more room for stuff to fly in before it gets killed by outof boudns kill
         this.game.world.setBounds(0, 0, 640, 2000);
+        this.hasMagnet = false;
 
 
         this.game_map = new Map(this.game);
+
+        this.firework = this.game.add.emitter (-20,-20, 100);
+        this.firework.makeParticles('firework');
+        this.firework.gravity = -200;
+        //this.firework.setAlpha(1, 0.1, 2000);
+        //this.firework.setScale(minX, maxX, minY, maxY, rate, ease, yoyo)
+        this.firework.setScale(0.1, 1, 0.1, 1, 100, Phaser.Easing.Circular.Out, false)
+        this.firework.setYSpeed(-800,800);
+        this.firework.setXSpeed(-800,800);
+
         // function : Player(game, x, y, player, gravity, speed)
+        this.player = new Player(this.game, 320, 100, "chicken", 2000, 400);
 
-        this.player = new Player(this.game, 320, 100, "chicken", 1500, 350);
-
-        this.score = 0;
+        this.score = 100;
         this.scoreBuffer = 0;
-        this.scoreText = this.game.add.bitmapText(this.game.width/2, 10, 'flappyfont', this.score.toString(),80);
+        this.scoreText = this.game.add.bitmapText(this.game.width/2, -300, 'flappyfont', this.score.toString(),80);
         this.scoreText.visible = true;
+        this.game.add.tween(this.scoreText).to({y:10}, 500, Phaser.Easing.Sinusoidal.Out, true, 0, 0, false);
 
         this.scoreText.align = 'center';
         this.scoreLabelTween = this.add.tween(this.scoreText.scale).to({ x: 1.5, y: 1.5}, 200, Phaser.Easing.Linear.In).to({ x: 1, y: 1}, 200, Phaser.Easing.Linear.In);
 
         this.scoreboard = new Scoreboard (this.game);
-        /*
-        // debug
-        this.add.button(280, 900, 'start', this.increaseSpeed, this);
-        this.add.button(280, 1000, 'start', this.decreaseSpeed, this);
 
-        //this.game_map.fever(20, 'cake', 30, this.player);
-
-    */
 
         this.coinSound= this.game.add.audio('coin_sound');
         this.landSound= this.game.add.audio('land_sound');
@@ -59,10 +63,7 @@ RPG.GameState.prototype = {
 
         }
 
-
-
-
-
+        this.game.input.onDown.add(this.particleBurst, this);
 
     },
     update : function (){
@@ -82,16 +83,40 @@ RPG.GameState.prototype = {
             }
         }
 
+        if(this.score ==5){
+            console.log("reached 0");
+            this.createLevelAnimation("LEVEL UP!", 1000);
+        }
 
+        //magnet event
+        this.game.physics.arcade.overlap (this.player, this.game_map.magnet, this.magnetHandler,null,this);
+        if (this.hasMagnet){
+            this.game_map.coinHolder.forEach(magnetGot, this, true, this.game, this.player);
+        }
+
+        this.game.physics.arcade.overlap (this.player, this.game_map.pepper, this.pepperHandler,null,this);
 
     },
-    /*
-    render : function (){
+    particleBurst: function (pointer) {
 
-        this.game.debug.text("Current speed is "+ this.player.movespeed, 32, 130);
-        //this.game.debug.inputInfo(32, 32);
+    //  Position the emitter where the mouse/touch event was
+    this.firework.x = pointer.x;
+    this.firework.y = pointer.y;
+
+    //  The first parameter sets the effect to "explode" which means all particles are emitted at once
+    //  The second gives each particle a 2000ms lifespan
+    //  The third is ignored when using burst/explode mode
+    //  The final parameter (10) is how many particles will be emitted in this single burst
+    
+    var clr = Math.random() * 0xffffff;
+    this.firework.forEachDead(function(particle) {
+    // tint every particle
+    //particle.tint = clr;
+    });
+
+    this.firework.start(true, 400, null, 20);
+
     },
-    */
     mutesound: function (){
         if (RPG.mute){
             this.volumeButton.setFrames(0, 0, 1);
@@ -107,29 +132,18 @@ RPG.GameState.prototype = {
 
     },
     incrementScore: function (num) {
-        this.score +=num;
+        this.score -=num;
         this.scoreText.setText (this.score.toString());
         this.scoreText.x = this.game.width/2 - (this.scoreText.textWidth/2);
     },
-    increaseSpeed: function () {
-        this.player.movespeed += 10;
-        console.log("current speed: " + this.player.movespeed);
-
-    },
-    decreaseSpeed: function () {
-        this.player.movespeed -= 10;
-        console.log("current speed: " + this.player.movespeed);
-
-    },
-    
     createScoreAnimation: function(x, y, message, score){
      
         var me = this;
      
-        var scoreFont = "40px Arial";
+        var scoreFont = "20px Arial";
      
         //Create a new label for the score
-        var scoreAnimation = me.game.add.text(x, y, message, {font: scoreFont, fill: "#39d179", stroke: "#ffffff", strokeThickness: 20}); 
+        var scoreAnimation = me.game.add.text(x, y, message, {font: scoreFont, fill: "#39d179", stroke: "#ffffff", strokeThickness: 10}); 
         scoreAnimation.anchor.setTo(0.5, 0);
         scoreAnimation.align = 'center';
      
@@ -143,10 +157,34 @@ RPG.GameState.prototype = {
             me.scoreBuffer += score;
         }, me);
     },
+    createLevelAnimation: function(message, score){
+     
+        var me = this;
+        var x = this.game.width/2;
+        var y = this.game.height/2;
+     
+        var scoreFont = "80px Arial";
+     
+        //Create a new label for the score
+        var scoreAnimation = me.game.add.text(x, y, message, {font: scoreFont, fill: "#39d179", stroke: "#ffffff", strokeThickness: 30}); 
+        scoreAnimation.anchor.setTo(0.5, 0);
+        scoreAnimation.align = 'center';
+     
+        //Tween this score label to the total score label
+        var scoreTween = me.game.add.tween(scoreAnimation).to({x:me.game.world.centerX, y: 50}, 800, Phaser.Easing.Exponential.In, true);
+     
+        //When the animation finishes, destroy this score label, trigger the total score labels animation and add the score
+        scoreTween.onComplete.add(function(){
+            scoreAnimation.destroy();
+            me.scoreLabelTween.start();
+            me.score = score;
+        }, me);
+    },
 
     gameOverHandler :function (){
         this.scoreboard.show(this.score);
         this.scoreText.visible = false;
+        this.hasMagnet = false;
         //this.deadSound.play();
         this.player.kill();
     },
@@ -156,6 +194,25 @@ RPG.GameState.prototype = {
             platform.played = true;
         }
         
+    },
+    magnetHandler : function (player, magnet){
+        magnet.kill();
+        this.hasMagnet = true;
+        this.game.time.events.add(Phaser.Timer.SECOND*5, this.resetMagnet, this);
+    },
+    pepperHandler : function (player, pepper){
+        pepper.kill();
+        player.movespeed *=2;
+        player.previousvelocity *=2;
+        player.body.gravity.y *=2;
+        this.game.time.events.add(Phaser.Timer.SECOND*5, this.resetPlayerSpeed, this);
+    },
+    resetMagnet: function (){
+        this.hasMagnet = false;
+    },
+    resetPlayerSpeed: function (){
+        this.player.movespeed /=2;
+        this.player.body.gravity.y /=2;
     },
 
 
@@ -170,4 +227,9 @@ RPG.GameState.prototype = {
 
     
 };
+// magenetfunction that moves the coins into the player
+function magnetGot (coin, game, player){
+//    game.physics.arcade.accelerateToObject(displayObject, destination, speed, xSpeedMax, ySpeedMax) 
+    game.physics.arcade.moveToObject(coin, player, 800) ;
+}
 

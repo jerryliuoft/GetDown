@@ -5,6 +5,7 @@
  function Player(game, x, y, player, gravity, speed){
 	console.log('in Player!');
 
+    this.keyboardMovement = true;
     this.movespeed = speed;
 
 	Phaser.Sprite.call(this, game, x, y, player);
@@ -20,7 +21,10 @@
     this.cursors = this.game.input.keyboard.createCursorKeys();
 
     //add mouse/touch controls
-    this.game.input.onDown.add(this.beginSwipe, this);
+
+    //this.game.input.onDown.add(this.beginSwipe, this);
+    this.mouse = this.game.input.mousePointer;
+
     this.previousvelocity = 0;
 
 
@@ -118,21 +122,44 @@ Player.prototype.update= function (){
     // reset velocity
     //this.body.velocity.x = 0;
 
+    if (this.keyboardMovement){
 
-    if (this.cursors.left.isDown)
-    {
-        this.previousvelocity = -this.movespeed;
-        this.scale.x = 1;
-        //this.animations.play('walk', 10, true);
-        
-    }
-    else if (this.cursors.right.isDown)
-    {
-        this.previousvelocity = this.movespeed;
-        this.scale.x = -1;
-        //this.animations.stop(1);
+        if (this.cursors.left.isDown)
+        {
+            this.previousvelocity = -this.movespeed;
+            this.scale.x = 1;
+            //this.animations.play('walk', 10, true);
+            
+        }
+        else if (this.cursors.right.isDown)
+        {
+            this.previousvelocity = this.movespeed;
+            this.scale.x = -1;
+            //this.animations.stop(1);
+
+        }
+
+    }else{
+        if (this.mouse.worldX < this.x)
+        {
+            this.previousvelocity = -this.movespeed;
+            this.scale.x = 1;
+            //this.animations.play('walk', 10, true);
+            
+        }
+        else if ( this.mouse.worldX >= this.x)
+        {
+            this.previousvelocity = this.movespeed;
+            this.scale.x = -1;
+            //this.animations.stop(1);
+
+        }
 
     }
+
+
+
+
 
     // on touch ground, play sound
 

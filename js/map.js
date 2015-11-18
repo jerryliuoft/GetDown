@@ -4,11 +4,10 @@ Map = function(game) {
     this.game = game;
 
 
-
-
-
     this.ground = this.game.add.tileSprite(0,0,640,2272,'background');
     this.ground.autoScroll(0,-20);
+    this.ground.alpha =0
+    this.game.add.tween(this.ground).to( { alpha: 1 }, 200, Phaser.Easing.Sinusoidal.In, true, 0, 0, false);
     //this.ground = this.game.add.sprite(0,0,'background');
 
     // the layers of each item from bottom to top
@@ -16,6 +15,7 @@ Map = function(game) {
     this.parallaxHolder1 = this.game.add.group();
     this.platformHolder = this.game.add.group();
     this.coinHolder = this.game.add.group();
+
 
     // bound holder for top bound and bottom bounds
     /////////////////////////////////////////////////////////////////////////
@@ -35,13 +35,50 @@ Map = function(game) {
     
     this.parallaxBG(2, 100);
     this.makeCoin(1.3, 400);
-    //this.makePlatforms(0.8, 220);
     this.makePlatforms(0.6, 300);
-    
+    this.makePowerups (16,410);
 
+
+    
 
 }
 
+Map.prototype.makePowerups = function (interval, speed){
+    //since we only need 1 powerups on screen at a time, created here 
+    this.magnet = randomItem(this.game,-100, -100, 500, "magnet");
+    this.pepper = randomItem(this.game,-100, -100, 450, "pepper");
+
+    this.powerupGenerator = this.game.time.events.loop (Phaser.Timer.SECOND*interval, this.generatePowerUps, this, speed);
+    this.powerupGenerator.timer.start();
+
+
+}
+Map.prototype.generatePowerUps = function (speed){
+
+
+
+
+    var randNum = this.game.rnd.integerInRange(0,3);
+
+    if(randNum>2){
+        var y_pos = this.game.height + 60;
+        var x_pos = this.game.rnd.integerInRange(30,this.game.width- 60);
+        resetItem ( this.game, this.magnet, x_pos, y_pos, speed);
+        this.magnet.anchor.setTo(0.5,0.5);
+        this.magnet.body.angularVelocity = 200;
+    }
+    randNum = this.game.rnd.integerInRange(0,7);
+
+    if(randNum){
+        var y_pos = this.game.height + 60;
+        var x_pos = this.game.rnd.integerInRange(100,this.game.width- 60);
+        resetItem ( this.game, this.pepper, x_pos, y_pos, 450);
+        this.magnet.anchor.setTo(0.5,0.5);
+        this.magnet.body.angularVelocity = 200;
+    }
+
+
+}
 Map.prototype.makeCoin = function (interval, speed){
 
     this.coinGenerator = this.game.time.events.loop (Phaser.Timer.SECOND*interval, this.generateCoin, this, speed);
@@ -51,6 +88,7 @@ Map.prototype.makeCoin = function (interval, speed){
 }
 
 Map.prototype.generateCoin = function (speed){
+
 
     var tileWidth = this.game.cache.getImage("coin").width;
     var tileHeight = this.game.cache.getImage("coin").height;
@@ -64,6 +102,8 @@ Map.prototype.generateCoin = function (speed){
     var shape = coinShapes('L');
 
     createCoins(this.game, x_pos, y_pos, num_row, num_col, this.coinHolder, speed, shape);
+
+
 
 }
 
@@ -141,16 +181,38 @@ Map.prototype.generatePlatform = function (speed){
             plat = randomItem (this.game, x_pos, y_pos, speed, 'platform');
             this.platformHolder.add( plat);
 
+
         }else{
             //console.log("recreating platform");
             resetItem(this.game, plat, x_pos, y_pos, speed);
-        } 
+
+        }
+        plat.frame = this.game.rnd.integerInRange(0, 3);
+        addFlowerGrass(this.game, plat);
+        
+
         
         
     }
 
 }
 
+function addFlowerGrass (game, plat){
+
+        plat.removeChildren();
+        var grassnum = game.rnd.integerInRange(0,1);
+        for (var i =0; i <grassnum; i ++){
+            plat.addChild(game.make.sprite(game.rnd.integerInRange(0,plat.width-20), -15, "grass"));
+        }
+
+        var flowernum = game.rnd.integerInRange(0,2);
+        for (var i =0; i <flowernum; i ++){
+            var flower = plat.addChild(game.make.sprite(game.rnd.integerInRange(0,plat.width-20),-15, "flower"));
+            flower.frame = (game.rnd.integerInRange(0,5));
+        }
+
+
+}
 
  function randomItem(game, x, y, speed, itemimg){
     
@@ -186,6 +248,7 @@ function resetItem (game, item, x_pos, y_pos, speed){
     //reset sound
     item.played = false;
 }
+
 
 
 
@@ -284,6 +347,16 @@ function coinShapes (shape){
     lookup['up_arrow'] = up_arrow;
     shapes.push(up_arrow);
 
+    var down_arrow =[
+    [1, 0, 0, 0, 1],
+    [1, 1, 0, 1, 1],
+    [1, 1, 1, 1, 1],
+    [0, 1, 1, 1, 0],
+    [0, 0, 1, 0, 0]
+    ];
+    lookup['up_arrow'] = up_arrow;
+    shapes.push(up_arrow);
+
 
     var O =[
     [0, 1, 1, 1, 0],
@@ -304,7 +377,7 @@ function coinShapes (shape){
     ];
     lookup['V'] = V;
     shapes.push(V);
-
+/*
     var E = [
     [1, 1, 1, 1, 1],
     [1, 1, 0, 0, 0],
@@ -314,7 +387,7 @@ function coinShapes (shape){
     ];
     lookup['E'] = E;
     shapes.push(E);
-
+*/
     var Dimond = [
     [0, 0, 1, 0, 0],
     [0, 1, 1, 1, 0],
@@ -355,17 +428,25 @@ function coinShapes (shape){
     shapes.push(back_slash);
 
 
-    var plus=[
+    var pointer_up=[
     [0, 0, 1, 0, 0],
-    [0, 0, 1, 0, 0],
+    [0, 1, 1, 1, 0],
     [1, 1, 1, 1, 1],
-    [0, 0, 1, 0, 0],
+    [0, 1, 1, 1, 0],
+    [0, 1, 1, 1, 0]
+    ];
+    lookup['pointer_up'] = pointer_up;
+    shapes.push(pointer_up);
+    
+    var pointer_down=[
+    [0, 1, 1, 1, 0],
+    [0, 1, 1, 1, 0],
+    [1, 1, 1, 1, 1],
+    [0, 1, 1, 1, 0],
     [0, 0, 1, 0, 0]
     ];
-    lookup['plus'] = plus;
-    shapes.push(plus);
-    
-
+    lookup['pointer_down'] = pointer_down;
+    shapes.push(pointer_down);
     
 
     var item = shapes[Math.floor(Math.random()*shapes.length)];
