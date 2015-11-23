@@ -37,6 +37,7 @@ RPG.PreloadState.prototype= {
 		this.game.load.image("magnet", "img/magnet.png");
 		this.game.load.image("firework", "img/dot.png");
 		this.game.load.image("pepper", "img/pepper.png");
+		this.game.load.image("plus", "img/plus1.png");
 		//this.game.load.image("chicken", "img/chicken.png");
 		this.game.load.image("coin", "img/coin.png");
 		this.game.load.spritesheet("platform", "img/platform.png", 200, 20);
@@ -52,6 +53,7 @@ RPG.PreloadState.prototype= {
 		this.load.audio('coin_sound', 'sfx/Pickup_Coin.wav');
 		this.load.audio('land_sound', 'sfx/land.wav');
 		this.load.audio('dead_sound', 'sfx/dead.wav');
+		this.load.audio('power_sound', 'sfx/powerup.wav');
 		this.load.audio('bgm', 'sfx/chickenbgm.mp3');
 
 

@@ -22,6 +22,8 @@ RPG.GameState.prototype = {
 
         this.game_map = new Map(this.game);
 
+        ////////////////////////////////////////////////////////
+        // firework starts
         this.firework = this.game.add.emitter (-20,-20, 100);
         this.firework.makeParticles('firework');
         this.firework.gravity = -200;
@@ -30,11 +32,15 @@ RPG.GameState.prototype = {
         this.firework.setScale(0.1, 1, 0.1, 1, 100, Phaser.Easing.Circular.Out, false)
         this.firework.setYSpeed(-800,800);
         this.firework.setXSpeed(-800,800);
+        //////////////////////////////////////////////////////////
 
         // function : Player(game, x, y, player, gravity, speed)
         this.player = new Player(this.game, 320, 100, "chicken", 2000, 400);
-
-        this.score = 100;
+        this.levelscore = 100;
+        this.level = 0;
+        this.levelmsg = ["Good Job!", "Fantastic!", "2.5k Points!", "Can You Go Higher?", "Almost There!" ,"God Like!", "Okay, You Beat The Game", "Still Playing?", "Damn, Email Me"];
+        this.point = 1;
+        this.score = 0;
         this.scoreBuffer = 0;
         this.scoreText = this.game.add.bitmapText(this.game.width/2, -300, 'flappyfont', this.score.toString(),80);
         this.scoreText.visible = true;
@@ -49,6 +55,7 @@ RPG.GameState.prototype = {
         this.coinSound= this.game.add.audio('coin_sound');
         this.landSound= this.game.add.audio('land_sound');
         this.deadSound= this.game.add.audio('dead_sound');
+        this.powerSound = this.game.add.audio('power_sound');
 
 
 
@@ -62,8 +69,8 @@ RPG.GameState.prototype = {
             this.volumeButton.setFrames(2, 2, 3);
 
         }
-
-        this.game.input.onDown.add(this.particleBurst, this);
+        //particle effect
+        //this.game.input.onDown.add(this.particleBurst, this);
 
     },
     update : function (){
@@ -83,18 +90,34 @@ RPG.GameState.prototype = {
             }
         }
 
-        if(this.score ==5){
-            console.log("reached 0");
-            this.createLevelAnimation("LEVEL UP!", 1000);
+
+        if(this.score == this.levelscore){
+            //console.log("reached ");
+            this.createLevelAnimation(this.levelmsg[this.level]);
+            if (this.levelscore < 1000)
+                this.levelscore *= 10;
+            else
+                this.levelscore *=2.5;
+            this.level ++;
         }
 
         //magnet event
         this.game.physics.arcade.overlap (this.player, this.game_map.magnet, this.magnetHandler,null,this);
         if (this.hasMagnet){
-            this.game_map.coinHolder.forEach(magnetGot, this, true, this.game, this.player);
+            this.game_map.coinHolder.setAllChildren('homing', true, true, false, 0, true);
         }
+        this.game_map.coinHolder.forEach(magnetGot, this, true, this.game, this.player);
 
-        this.game.physics.arcade.overlap (this.player, this.game_map.pepper, this.pepperHandler,null,this);
+        // pepper event
+        //this.game.physics.arcade.overlap (this.player, this.game_map.pepper, this.pepperHandler,null,this);
+
+        // Point event
+        this.game.physics.arcade.overlap (this.player, this.game_map.plus, this.plusHandler,null,this);
+        //
+
+        if (!RPG.BGM.isPlaying){
+            RPG.BGM.play();
+        }
 
     },
     particleBurst: function (pointer) {
@@ -117,6 +140,7 @@ RPG.GameState.prototype = {
     this.firework.start(true, 400, null, 20);
 
     },
+
     mutesound: function (){
         if (RPG.mute){
             this.volumeButton.setFrames(0, 0, 1);
@@ -132,7 +156,7 @@ RPG.GameState.prototype = {
 
     },
     incrementScore: function (num) {
-        this.score -=num;
+        this.score +=num;
         this.scoreText.setText (this.score.toString());
         this.scoreText.x = this.game.width/2 - (this.scoreText.textWidth/2);
     },
@@ -157,28 +181,23 @@ RPG.GameState.prototype = {
             me.scoreBuffer += score;
         }, me);
     },
-    createLevelAnimation: function(message, score){
+    createLevelAnimation: function(message){
      
         var me = this;
         var x = this.game.width/2;
         var y = this.game.height/2;
      
         var scoreFont = "80px Arial";
-     
         //Create a new label for the score
         var scoreAnimation = me.game.add.text(x, y, message, {font: scoreFont, fill: "#39d179", stroke: "#ffffff", strokeThickness: 30}); 
         scoreAnimation.anchor.setTo(0.5, 0);
         scoreAnimation.align = 'center';
-     
         //Tween this score label to the total score label
         var scoreTween = me.game.add.tween(scoreAnimation).to({x:me.game.world.centerX, y: 50}, 800, Phaser.Easing.Exponential.In, true);
-     
-        //When the animation finishes, destroy this score label, trigger the total score labels animation and add the score
         scoreTween.onComplete.add(function(){
             scoreAnimation.destroy();
-            me.scoreLabelTween.start();
-            me.score = score;
         }, me);
+
     },
 
     gameOverHandler :function (){
@@ -197,9 +216,11 @@ RPG.GameState.prototype = {
     },
     magnetHandler : function (player, magnet){
         magnet.kill();
+        this.powerSound.play();
         this.hasMagnet = true;
-        this.game.time.events.add(Phaser.Timer.SECOND*5, this.resetMagnet, this);
+        this.game.time.events.add(Phaser.Timer.SECOND*6, this.resetMagnet, this);
     },
+    /*
     pepperHandler : function (player, pepper){
         pepper.kill();
         player.movespeed *=2;
@@ -207,19 +228,24 @@ RPG.GameState.prototype = {
         player.body.gravity.y *=2;
         this.game.time.events.add(Phaser.Timer.SECOND*5, this.resetPlayerSpeed, this);
     },
+    */
+    plusHandler : function (player, plus){
+        plus.kill();
+        this.powerSound.play();
+        this.point ++;
+    },
     resetMagnet: function (){
         this.hasMagnet = false;
     },
+    /*
     resetPlayerSpeed: function (){
         this.player.movespeed /=2;
         this.player.body.gravity.y /=2;
     },
-
-
+*/
     candyHandler :function (player, candy){
 
-        this.scoreBuffer += 5;
-        this.createScoreAnimation(player.x + player.width/2, candy.y, '+5', 5);
+        this.createScoreAnimation(player.x + player.width/2, candy.y, '+'+this.point.toString(), this.point);
         candy.kill ();
         this.coinSound.play();
     }
@@ -230,6 +256,9 @@ RPG.GameState.prototype = {
 // magenetfunction that moves the coins into the player
 function magnetGot (coin, game, player){
 //    game.physics.arcade.accelerateToObject(displayObject, destination, speed, xSpeedMax, ySpeedMax) 
-    game.physics.arcade.moveToObject(coin, player, 800) ;
+    if (coin.homing){
+        game.physics.arcade.moveToObject(coin, player, 800) ;
+    }
+        
 }
 

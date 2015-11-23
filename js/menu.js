@@ -36,7 +36,7 @@ RPG.MenuState.prototype = {
         var chicken = this.game.add.sprite (this.game.width/2, 710, 'bigchicken');
         chicken.frame = this.game.rnd.integerInRange(0,5);
         chicken.anchor.setTo(0.5,0.5);
-        RPG.BGM.loop=  true;
+        RPG.BGM.loop=  false;
         RPG.BGM.volume=0.7;
         RPG.BGM.play();
         
@@ -46,6 +46,8 @@ RPG.MenuState.prototype = {
         this.logo = logo;
         this.chicken = chicken;
         this.startButton = startButton;
+
+        this.versionText = this.game.add.bitmapText (520, 1100, 'flappyfont', 'Version 2', 20);
 
 
     },
